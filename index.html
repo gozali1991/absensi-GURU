@@ -3,114 +3,590 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scanner Presensi Guru</title>
+  <title>Kiosk Presensi Digital Guru</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      text-align: center;
-      background-color: #f0f2f5;
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #ea580c;
+      --danger: #dc2626;
+      --bg-dark: #0f172a;
+      --surface: #1e293b;
+      --surface-card: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
       margin: 0;
-      padding: 16px;
+      padding: 0;
+      user-select: none;
     }
-    .container {
-      max-width: 480px;
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .school-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+
+    .school-title h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .school-title p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .time-panel {
+      text-align: right;
+    }
+
+    .digital-clock {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 1px;
+    }
+
+    .date-string {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    main {
+      flex: 1;
+      padding: 24px 36px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 28px;
+      max-width: 1500px;
       margin: 0 auto;
-      background: white;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 100%;
     }
-    h2 { margin-top: 0; color: #1a73e8; font-size: 20px; }
-    #reader { width: 100%; border-radius: 10px; overflow: hidden; margin-top: 10px; }
-    
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .scanner-panel {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #cbd5e1;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 10px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    .scanner-viewport-wrapper {
+      position: relative;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      flex: 1;
+      min-height: 380px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(56, 189, 248, 0.2);
+    }
+
+    #reader {
+      width: 100% !important;
+      border: none !important;
+    }
+
+    #reader video {
+      border-radius: 14px;
+      object-fit: cover !important;
+    }
+
+    .scan-laser-line {
+      position: absolute;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #38bdf8, #60a5fa, transparent);
+      box-shadow: 0 0 15px #38bdf8;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      animation: scanningLine 2.5s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes scanningLine {
+      from { top: 5%; }
+      to { top: 95%; }
+    }
+
+    .barcode-input-container {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .barcode-input-container input {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 15px;
+      color: #fff;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .barcode-input-container input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .barcode-input-container button {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      padding: 0 24px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .barcode-input-container button:active {
+      transform: scale(0.97);
+    }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .instruction-card {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(15, 23, 42, 0.6));
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 18px;
+      padding: 20px 24px;
+    }
+
+    .instruction-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #93c5fd;
+      margin-bottom: 8px;
+    }
+
+    .instruction-card p {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .recent-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 20px 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .recent-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      max-height: 380px;
+      padding-right: 4px;
+    }
+
+    .recent-item {
+      background: var(--surface-card);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .recent-item .info h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .recent-item .info span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .tag-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-ontime { background: rgba(22, 163, 74, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
+    .tag-late { background: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .tag-checkout { background: rgba(37, 99, 235, 0.2); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3); }
+
     .modal-overlay {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
+      background: rgba(10, 15, 30, 0.85);
+      backdrop-filter: blur(8px);
       align-items: center;
       justify-content: center;
       z-index: 9999;
     }
+
     .modal-card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      padding: 36px;
       width: 90%;
-      max-width: 400px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      max-width: 480px;
       text-align: center;
-      animation: popIn 0.25s ease-out;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    @keyframes popIn {
+
+    @keyframes modalPop {
       from { transform: scale(0.85); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
     }
-    .modal-icon { font-size: 48px; margin-bottom: 10px; }
-    .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
-    .modal-desc { font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.4; }
-    
-    .btn-group { display: flex; gap: 10px; justify-content: center; }
-    .btn {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
+
+    .modal-icon-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
     }
-    .btn-primary { background: #1a73e8; color: white; }
-    .btn-danger { background: #d93025; color: white; }
-    .btn-secondary { background: #e0e0e0; color: #333; }
-    
-    .toast-process {
-      margin-top: 15px;
-      font-size: 13px;
-      color: #666;
+
+    .icon-success { background: rgba(22, 163, 74, 0.2); border: 2px solid #22c55e; }
+    .icon-late { background: rgba(234, 88, 12, 0.2); border: 2px solid #ea580c; }
+    .icon-danger { background: rgba(220, 38, 38, 0.2); border: 2px solid #ef4444; }
+    .icon-info { background: rgba(37, 99, 235, 0.2); border: 2px solid #3b82f6; }
+
+    .modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .modal-desc {
+      font-size: 15px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .btn-action {
+      min-width: 120px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-action-primary { background: var(--primary); color: #fff; }
+    .btn-action-danger { background: var(--danger); color: #fff; }
+    .btn-action-cancel { background: #475569; color: #fff; margin-left: 10px; }
+
+    .toast-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.9);
+      padding: 16px 28px;
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-weight: 700;
       display: none;
+      z-index: 50;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Presensi Barcode Guru</h2>
-    <div id="reader"></div>
-    <div id="processing" class="toast-process">Memproses kode barcode...</div>
-  </div>
+  <header>
+    <div class="school-info">
+      <div class="badge-icon">🏫</div>
+      <div class="school-title">
+        <h1>KIOSK PRESENSI GURU & PEGAWAI</h1>
+        <p>Sistem Pemindai Barcode Otomatis Real-time</p>
+      </div>
+    </div>
+    <div class="time-panel">
+      <div id="clock" class="digital-clock">00:00:00</div>
+      <div id="date" class="date-string">Memuat tanggal...</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="scanner-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="status-dot"></span> Kamera Pemindai Aktif
+        </div>
+        <span style="font-size: 12px; color: var(--text-muted);">Arahkan Barcode ke Kotak Target</span>
+      </div>
+
+      <div class="scanner-viewport-wrapper">
+        <div class="scan-laser-line"></div>
+        <div id="reader"></div>
+        <div id="toast" class="toast-overlay">Memproses Data Presensi...</div>
+      </div>
+
+      <form onsubmit="handleManualSubmit(event)" class="barcode-input-container">
+        <input type="text" id="manual-id" placeholder="Scan Barcode Card / Ketik ID Pegawai..." autocomplete="off" autofocus>
+        <button type="submit">Catat</button>
+      </form>
+    </section>
+
+    <aside class="side-panel">
+      <div class="instruction-card">
+        <h3>PETUNJUK PENGGUNAAN</h3>
+        <p>1. Tunjukkan kartu ID berbarcode tepat di depan area sensor kamera.<br>
+           2. Tunggu hingga terdengar nada notifikasi dan layar menampilkan konfirmasi.<br>
+           3. Pastikan status kehadiran Anda tercatat pada log di bawah.</p>
+      </div>
+
+      <div class="recent-card">
+        <h3>
+          <span>RIWAYAT SCAN TERAKHIR</span>
+          <span id="scan-count" style="font-size: 12px; color: #38bdf8;">0 Terekam</span>
+        </h3>
+        <div id="recent-list" class="recent-list">
+          <div style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 40px;">
+            Belum ada aktivitas presensi hari ini
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
 
   <div id="modal" class="modal-overlay">
     <div class="modal-card">
-      <div id="modal-icon" class="modal-icon"></div>
-      <div id="modal-title" class="modal-title"></div>
+      <div id="modal-icon-container" class="modal-icon-circle"></div>
+      <h2 id="modal-title" class="modal-title"></h2>
       <div id="modal-desc" class="modal-desc"></div>
-      <div id="modal-actions" class="btn-group"></div>
+      <div id="modal-actions"></div>
     </div>
   </div>
 
   <script>
-    // MASUKKAN URL HASIL DEPLOY APPS SCRIPT DI SINI
+    // URL WEB APP TERBARU DARI GOOGLE APPS SCRIPT
     const API_URL = "https://script.google.com/macros/s/AKfycbwCZ6OpyusW8X5nZ_xeXtsABCgCz97RSKFoPwm9RufmAGhGnXJSuiiZPGX8X6FZdPAp9w/exec";
 
     let isScanningPaused = false;
     let pendingEarlyId = null;
+    let autoCloseTimer = null;
+    let totalScanned = 0;
 
-    function showModal(icon, title, desc, buttonsHtml) {
-      document.getElementById('modal-icon').innerHTML = icon;
-      document.getElementById('modal-title').innerHTML = title;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'success') {
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      }
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').innerText = `${hours}:${minutes}:${seconds}`;
+
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('date').innerText = now.toLocaleDateString('id-ID', options);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function showModal(iconEmoji, iconClass, title, desc, buttonsHtml, autoCloseSec = 4) {
+      clearTimeout(autoCloseTimer);
+      const iconContainer = document.getElementById('modal-icon-container');
+      iconContainer.className = 'modal-icon-circle ' + iconClass;
+      iconContainer.innerText = iconEmoji;
+
+      document.getElementById('modal-title').innerText = title;
       document.getElementById('modal-desc').innerHTML = desc;
       document.getElementById('modal-actions').innerHTML = buttonsHtml;
       document.getElementById('modal').style.display = 'flex';
+
+      if (autoCloseSec > 0) {
+        autoCloseTimer = setTimeout(() => {
+          closeModal();
+        }, autoCloseSec * 1000);
+      }
     }
 
     function closeModal() {
+      clearTimeout(autoCloseTimer);
       document.getElementById('modal').style.display = 'none';
-      document.getElementById('processing').style.display = 'none';
+      document.getElementById('toast').style.display = 'none';
+      document.getElementById('manual-id').value = '';
+      document.getElementById('manual-id').focus();
       setTimeout(() => {
         isScanningPaused = false;
-      }, 1500);
+      }, 1200);
+    }
+
+    function addRecentFeed(nama, info, status, tagClass) {
+      const list = document.getElementById('recent-list');
+      if (totalScanned === 0) list.innerHTML = '';
+      totalScanned++;
+      document.getElementById('scan-count').innerText = `${totalScanned} Terekam`;
+
+      const now = new Date();
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+      const item = document.createElement('div');
+      item.className = 'recent-item';
+      item.innerHTML = `
+        <div class="info">
+          <h4>${nama}</h4>
+          <span>${info} • ${timeStr} WIB</span>
+        </div>
+        <span class="tag-status ${tagClass}">${status}</span>
+      `;
+      list.insertBefore(item, list.firstChild);
     }
 
     async function sendDataToSheets(id, forceEarly) {
@@ -123,77 +599,95 @@
 
     function confirmEarlyLeave() {
       if (!pendingEarlyId) return;
-      document.getElementById('processing').style.display = 'block';
-      document.getElementById('processing').innerText = 'Menyimpan konfirmasi pulang awal...';
+      document.getElementById('toast').style.display = 'block';
       document.getElementById('modal').style.display = 'none';
 
       sendDataToSheets(pendingEarlyId, true)
         .then(res => {
-          showModal('🚪', 'Pulang Awal Tercatat', res.nama + '<br>' + res.message, 
-            '<button class="btn btn-primary" onclick="closeModal()">OK</button>'
+          playBeep('success');
+          addRecentFeed(res.nama, 'ID: ' + pendingEarlyId, 'PULANG AWAL', 'tag-late');
+          showModal('🚪', 'icon-info', 'Pulang Awal Tercatat', 
+            `<strong>${res.nama}</strong><br>${res.message}`, 
+            '<button class="btn-action btn-action-primary" onclick="closeModal()">Selesai</button>', 4
           );
         })
         .catch(err => {
-          showModal('❌', 'Gagal', err.message, '<button class="btn btn-secondary" onclick="closeModal()">Tutup</button>');
+          showModal('❌', 'icon-danger', 'Gagal', err.message, '<button class="btn-action btn-action-cancel" onclick="closeModal()">Tutup</button>', 4);
         });
     }
 
-    function onScanSuccess(decodedText) {
+    function executeProcess(idValue) {
       if (isScanningPaused) return;
       isScanningPaused = true;
 
-      document.getElementById('processing').style.display = 'block';
-      document.getElementById('processing').innerText = 'Memvalidasi ID: ' + decodedText + '...';
+      document.getElementById('toast').style.display = 'block';
 
-      sendDataToSheets(decodedText, false)
+      sendDataToSheets(idValue, false)
         .then(res => {
-          document.getElementById('processing').style.display = 'none';
+          document.getElementById('toast').style.display = 'none';
 
           if (!res.success) {
-            showModal('⚠️', 'Perhatian', res.message, 
-              '<button class="btn btn-secondary" onclick="closeModal()">Tutup</button>'
+            playBeep('error');
+            showModal('⚠️', 'icon-late', 'Presensi Ditolak', res.message, 
+              '<button class="btn-action btn-action-cancel" onclick="closeModal()">Tutup</button>', 4
             );
             return;
           }
 
           if (res.type === 'ON_TIME') {
-            showModal('🌟', 'Hadir Tepat Waktu', 
-              '<strong>' + res.nama + '</strong> (' + res.waktu + ')<br><br>' + res.message,
-              '<button class="btn btn-primary" onclick="closeModal()">Selesai</button>'
+            playBeep('success');
+            addRecentFeed(res.nama, 'Tepat Waktu', 'HADIR', 'tag-ontime');
+            showModal('🌟', 'icon-success', 'Hadir Tepat Waktu', 
+              `<strong>${res.nama}</strong> (${res.waktu})<br><br>${res.message}`,
+              '<button class="btn-action btn-action-primary" onclick="closeModal()">Selesai</button>', 3
             );
           } else if (res.type === 'LATE') {
-            showModal('⏰', 'Peringatan Terlambat', 
-              '<strong>' + res.nama + '</strong> (' + res.waktu + ')<br><br>' + res.message,
-              '<button class="btn btn-danger" onclick="closeModal()">Saya Mengerti</button>'
+            playBeep('error');
+            addRecentFeed(res.nama, 'Terlambat', 'TERLAMBAT', 'tag-late');
+            showModal('⏰', 'icon-late', 'Peringatan Terlambat', 
+              `<strong>${res.nama}</strong> (${res.waktu})<br><br>${res.message}`,
+              '<button class="btn-action btn-action-danger" onclick="closeModal()">Saya Mengerti</button>', 4
             );
           } else if (res.type === 'EARLY_CONFIRMATION') {
+            playBeep('error');
             pendingEarlyId = res.id;
-            showModal('❓', 'Konfirmasi Pulang Cepat', 
-              '<strong>' + res.nama + '</strong><br><br>' + res.message,
-              '<button class="btn btn-danger" onclick="confirmEarlyLeave()">Ya, Pulang</button>' +
-              '<button class="btn btn-secondary" onclick="closeModal()">Batal</button>'
+            showModal('❓', 'icon-info', 'Konfirmasi Pulang Cepat', 
+              `<strong>${res.nama}</strong><br><br>${res.message}`,
+              `<button class="btn-action btn-action-danger" onclick="confirmEarlyLeave()">Ya, Pulang</button>
+               <button class="btn-action btn-action-cancel" onclick="closeModal()">Batal</button>`, 0
             );
           } else if (res.type === 'CHECKOUT_SUCCESS') {
-            showModal('✅', 'Presensi Pulang Selesai', 
-              '<strong>' + res.nama + '</strong> (' + res.waktu + ')<br><br>' + res.message,
-              '<button class="btn btn-primary" onclick="closeModal()">Tutup</button>'
+            playBeep('success');
+            addRecentFeed(res.nama, 'Jam Pulang', 'PULANG', 'tag-checkout');
+            showModal('✅', 'icon-info', 'Presensi Pulang Selesai', 
+              `<strong>${res.nama}</strong> (${res.waktu})<br><br>${res.message}`,
+              '<button class="btn-action btn-action-primary" onclick="closeModal()">Tutup</button>', 3
             );
           }
         })
         .catch(err => {
-          document.getElementById('processing').style.display = 'none';
-          showModal('❌', 'Kesalahan Sistem', 'Gagal terhubung ke spreadsheet: ' + err.message, 
-            '<button class="btn btn-secondary" onclick="closeModal()">Tutup</button>'
+          document.getElementById('toast').style.display = 'none';
+          playBeep('error');
+          showModal('❌', 'icon-danger', 'Kesalahan Sistem', 'Gagal memproses data: ' + err.message, 
+            '<button class="btn-action btn-action-cancel" onclick="closeModal()">Tutup</button>', 4
           );
         });
     }
 
-    // Kamera langsung otomatis menyala di GitHub Pages
-    const scanner = new Html5QrcodeScanner("reader", { 
-      fps: 10, 
-      qrbox: { width: 250, height: 250 } 
-    }, false);
-    scanner.render(onScanSuccess);
+    function handleManualSubmit(e) {
+      e.preventDefault();
+      const val = document.getElementById('manual-id').value.trim();
+      if (val) executeProcess(val);
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", 
+      { fps: 15, qrbox: { width: 280, height: 280 } },
+      /* verbose= */ false
+    );
+    html5QrcodeScanner.render((decodedText) => {
+      executeProcess(decodedText);
+    });
   </script>
 </body>
 </html>
